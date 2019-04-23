@@ -34,4 +34,28 @@ def init_layers(nn_architecture, seed = 99):
 
     return params_values
 
+# Z - is a dot product of input values and weights in a neuron
+# x1, x2 - input values, w1, w2 - weights
+# Z = x1 * w1 + x2 * w2
+
+# https://en.wikipedia.org/wiki/Sigmoid_function
+def sigmoid(Z):
+    return 1 / (1 + np.exp(-Z))
+
+# derivative of the sigmoid function
+# https://towardsdatascience.com/derivative-of-the-sigmoid-function-536880cf918e
+def sigmoid_backward(dA, Z):
+    sig = sigmoid(Z)
+    return dA * sig * (1 - sig)
+
+# https://medium.com/tinymind/a-practical-guide-to-relu-b83ca804f1f7
+def relu(Z):
+    return np.maximum(0, Z)
+
+# derivative of ReLU https://stats.stackexchange.com/a/333400
+def relu_backward(dA, Z):
+    dZ = np.array(dA, copy = True)
+    dZ[Z <= 0] = 0
+    return dZ
+
 print(init_layers(nn_architecture))
