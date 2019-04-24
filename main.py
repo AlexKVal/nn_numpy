@@ -8,6 +8,12 @@ nn_architecture = [
     {"input_dim": 4, "output_dim": 1, "activation": "sigmoid"},
 ]
 
+def weight_key(idx):
+    return 'W' + str(idx)
+
+def bias_key(idx):
+    return 'b' + str(idx)
+
 def init_layers(nn_architecture, seed = 99):
     np.random.seed(seed)
     number_of_layers = len(nn_architecture)
@@ -27,10 +33,8 @@ def init_layers(nn_architecture, seed = 99):
         rnd_weights = np.random.randn(layer_output_size, layer_input_size) * 0.1
         rnd_biases = np.random.randn(layer_output_size, 1) * 0.1
 
-        weight_key = 'W' + str(layer_idx)
-        params_values[weight_key] = rnd_weights
-        bias_key = 'b' + str(layer_idx)
-        params_values[bias_key] = rnd_biases
+        params_values[weight_key(layer_idx)] = rnd_weights
+        params_values[bias_key(layer_idx)] = rnd_biases
 
     return params_values
 
@@ -74,4 +78,44 @@ def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation="relu"):
     else:
         raise Exception("Non-supported activation function")
 
-print(init_layers(nn_architecture))
+def a_key(idx):
+    return 'A' + str(idx)
+
+def z_key(idx):
+    return 'Z' + str(idx)
+
+# X - input values
+# params_values - working "cache" of Weights and Bias values
+def full_forward_propagation(X, params_values, nn_architecture):
+    memory = {} # cache for backward propagation
+    A_curr = X
+
+    for idx, layer in enumerate(nn_architecture):
+        layer_idx = idx + 1 # layer indexes are 1 based
+
+        # previous layer's output values are the next layer's input values
+        A_prev = A_curr
+
+        W_curr = params_values[weight_key(layer_idx)]
+        b_curr = params_values[bias_key(layer_idx)]
+        A_curr, Z_curr = single_layer_forward_propagation(A_prev, W_curr, b_curr, layer["activation"])
+
+        # save calculated forward results
+        memory[a_key(idx)] = A_prev # idx contains previous layer index value
+        memory[z_key(layer_idx)] = Z_curr
+
+    return A_curr, memory # return final output A_curr along with cache for backpropagation
+
+nn_params_values = init_layers(nn_architecture)
+print("Starting Weights and bias values:")
+print(nn_params_values)
+print("\n\n")
+
+X = [1, 0] # e.g.
+output, memory_back = full_forward_propagation(X, nn_params_values, nn_architecture)
+print("Output values:")
+print(output)
+print("\n\n")
+print("memory values:")
+print(memory_back)
+print("\n\n")
