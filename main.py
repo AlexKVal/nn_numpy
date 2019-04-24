@@ -58,4 +58,20 @@ def relu_backward(dA, Z):
     dZ[Z <= 0] = 0
     return dZ
 
+# Z_curr is affine transformation
+# A_prev is affine transformation result from the previous layer
+# W_curr the weights of the current layer
+# b_curr the bias of the current layer
+# The function additinally returns the Z_curr
+# for it later being used for backward propagation
+def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation="relu"):
+    Z_curr = np.dot(W_curr, A_prev) + b_curr
+
+    if activation is "relu":
+        return relu(Z_curr), Z_curr
+    elif activation is "sigmoid":
+        return sigmoid(Z_curr), Z_curr
+    else:
+        raise Exception("Non-supported activation function")
+
 print(init_layers(nn_architecture))
