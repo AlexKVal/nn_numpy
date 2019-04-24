@@ -38,6 +38,7 @@ def init_layers(nn_architecture, seed = 99):
 
     return params_values
 
+
 # Z - is a dot product of input values and weights in a neuron
 # x1, x2 - input values, w1, w2 - weights
 # Z = x1 * w1 + x2 * w2
@@ -62,8 +63,9 @@ def relu_backward(dA, Z):
     dZ[Z <= 0] = 0
     return dZ
 
+
 # Z_curr is affine transformation
-# A_prev is affine transformation result from the previous layer
+# A_prev is affine transformation result from the previous layer (activations)
 # W_curr the weights of the current layer
 # b_curr the bias of the current layer
 # The function additinally returns the Z_curr
@@ -77,6 +79,7 @@ def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation="relu"):
         return sigmoid(Z_curr), Z_curr
     else:
         raise Exception("Non-supported activation function")
+
 
 def a_key(idx):
     return 'A' + str(idx)
@@ -106,6 +109,7 @@ def full_forward_propagation(X, params_values, nn_architecture):
 
     return A_curr, memory # return final output A_curr along with cache for backpropagation
 
+
 # Loss function: binary crossentropy
 # https://ml-cheatsheet.readthedocs.io/en/latest/loss_functions.html#id11
 # m - number of classes (dog, cat, fish) in a classification (in binary it should be 2)
@@ -115,6 +119,27 @@ def get_cost_value(Y_hat, Y):
     m = Y_hat.shape[1] # the second dimension of the Y_hat matrix
     cost = -1 / m * (np.dot(Y, np.log(Y_hat).T) + np.dot(1 - Y, np.log(1 - Y_hat).T))
     return np.squeeze(cost) # [[[0], [1], [2]]] => [0, 1, 2]
+
+# https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+# https://youtu.be/tIeHLnjs5U8 Backpropagation calculus
+def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, activation="relu"):
+    m = A_prev.shape[1] # input_dim
+
+    if activation is "relu":
+        backward_activation = relu_backward
+    elif activation is "sigmoid":
+        backward_activation = sigmoid_backward
+    else:
+        raise Exception("Non-supported backward activation function")
+
+    # calculate gradient descent with activation function derivative
+    dZ_curr = backward_activation(dA_curr, Z_curr)
+    dA_prev = np.dot(W_curr.T, dZ_curr)
+    dW_curr = np.dot(dZ_curr, A_prev.T) / m
+    db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / m
+
+    return dA_prev, dW_curr, db_curr
+
 
 nn_params_values = init_layers(nn_architecture)
 print("Starting Weights and bias values:")
