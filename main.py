@@ -106,6 +106,16 @@ def full_forward_propagation(X, params_values, nn_architecture):
 
     return A_curr, memory # return final output A_curr along with cache for backpropagation
 
+# Loss function: binary crossentropy
+# https://ml-cheatsheet.readthedocs.io/en/latest/loss_functions.html#id11
+# m - number of classes (dog, cat, fish) in a classification (in binary it should be 2)
+# Y - binary indicator (0 or 1) if class label is the correct classification
+# Y_hat - predicted probability
+def get_cost_value(Y_hat, Y):
+    m = Y_hat.shape[1] # the second dimension of the Y_hat matrix
+    cost = -1 / m * (np.dot(Y, np.log(Y_hat).T) + np.dot(1 - Y, np.log(1 - Y_hat).T))
+    return np.squeeze(cost) # [[[0], [1], [2]]] => [0, 1, 2]
+
 nn_params_values = init_layers(nn_architecture)
 print("Starting Weights and bias values:")
 print(nn_params_values)
