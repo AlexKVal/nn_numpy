@@ -141,6 +141,40 @@ def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, a
     return dA_prev, dW_curr, db_curr
 
 
+def dW_key(idx):
+    return 'dW' + str(idx)
+
+def db_key(idx):
+    return 'db' + str(idx)
+
+def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
+    grads_values = {} # cost function derivatives calculated w.r.t. params_values
+    m = Y.shape[1]
+    Y = Y.reshape(Y_hat.shape)
+
+    dA_prev = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
+
+    for layer_idx_prev, layer in reversed(list(enumerate(nn_architecture))):
+        layer_idx_curr = layer_idx_prev + 1
+        activation_curr = layer["activation"]
+
+        dA_curr = dA_prev
+
+        A_prev = memory[a_key(layer_idx_prev)]
+        Z_curr = memory[z_key(layer_idx_curr)]
+        W_curr = params_values[weight_key(layer_idx_curr)]
+        b_curr = params_values[bias_key(layer_idx_curr)]
+
+        dA_prev, dW_curr, db_curr = single_layer_backward_propagation(
+            dA_curr, W_curr, b_curr, Z_curr, A_prev, activation_curr
+        )
+
+        grads_values[dW_key(layer_idx_curr)] = dW_curr
+        grads_values[db_key(layer_idx_curr)] = db_curr
+
+    return grads_values
+
+
 nn_params_values = init_layers(nn_architecture)
 print("Starting Weights and bias values:")
 print(nn_params_values)
