@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
 
 nn_architecture = [
     {"input_dim": 2, "output_dim": 4, "activation": "relu"},
@@ -91,7 +93,7 @@ def z_key(idx):
 # params_values - working "cache" of Weights and Bias values
 def full_forward_propagation(X, params_values, nn_architecture):
     memory = {} # cache for backward propagation
-    A_curr = X
+    A_curr = X # X vector is the activation for layer 0
 
     for idx, layer in enumerate(nn_architecture):
         layer_idx = idx + 1 # layer indexes are 1 based
@@ -123,7 +125,7 @@ def get_cost_value(Y_hat, Y):
 # https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 # https://youtu.be/tIeHLnjs5U8 Backpropagation calculus
 def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, activation="relu"):
-    m = A_prev.shape[1] # input_dim
+    m = A_prev.shape[1] # input_dim, number of examples
 
     if activation is "relu":
         backward_activation = relu_backward
@@ -134,8 +136,11 @@ def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, a
 
     # calculate gradient descent with activation function derivative
     dZ_curr = backward_activation(dA_curr, Z_curr)
+    # derivative of the matrix A_prev
     dA_prev = np.dot(W_curr.T, dZ_curr)
+    # derivative of the matrix W
     dW_curr = np.dot(dZ_curr, A_prev.T) / m
+    # derivative of the vector b
     db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / m
 
     return dA_prev, dW_curr, db_curr
@@ -149,9 +154,10 @@ def db_key(idx):
 
 def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
     grads_values = {} # cost function derivatives calculated w.r.t. params_values
-    m = Y.shape[1]
-    Y = Y.reshape(Y_hat.shape)
+    m = Y.shape[1] # number of examples
+    Y = Y.reshape(Y_hat.shape) # ensure the same shape of the prediction vector and labels vector
 
+    # initialisation of the gradient descent algorithm
     dA_prev = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
 
     for layer_idx_prev, layer in reversed(list(enumerate(nn_architecture))):
@@ -183,16 +189,69 @@ def update(params_values, grads_values, nn_architecture, learning_rate):
     return params_values
 
 
-nn_params_values = init_layers(nn_architecture)
-print("Starting Weights and bias values:")
-print(nn_params_values)
-print("\n\n")
+# an auxiliary function that converts probability into class
+def convert_prob_into_class(probs):
+    probs_ = np.copy(probs)
+    probs_[probs_ > 0.5] = 1
+    probs_[probs_ <= 0.5] = 0
+    return probs_
 
-X = [1, 0] # e.g.
-output, memory_back = full_forward_propagation(X, nn_params_values, nn_architecture)
-print("Output values:")
-print(output)
-print("\n\n")
-print("memory values:")
-print(memory_back)
-print("\n\n")
+def get_accuracy_value(Y_hat, Y):
+    Y_hat_ = convert_prob_into_class(Y_hat)
+    return (Y_hat_ == Y).all(axis=0).mean()
+
+
+# putting it all together
+def train(X, Y, nn_architecture, epochs, learning_rate):
+    params_values = init_layers(nn_architecture, 2) # different seed
+
+    # lists storing the history of metrics calculated during the learning process
+    cost_history = []
+    accuracy_history = []
+
+    for i in range(epochs):
+        # forward
+        Y_hat, memory_cache = full_forward_propagation(X, params_values, nn_architecture)
+
+        # calculate and save metrics
+        cost = get_cost_value(Y_hat, Y)
+        cost_history.append(cost)
+        accuracy = get_accuracy_value(Y_hat, Y)
+        accuracy_history.append(accuracy)
+
+        # backward - calculate gradient
+        grads_values = full_backward_propagation(Y_hat, Y, memory_cache, params_values, nn_architecture)
+        # update model state
+        params_values = update(params_values, grads_values, nn_architecture, learning_rate)
+
+        # feedback during the training process
+        if i % 50 == 0:
+            print("Iter: {:05} - cost: {:.5f} - accur: {:.5f}".format(i, cost, accuracy))
+
+    return params_values
+
+
+# ===============================================
+# run it
+
+# number of samples in the data set
+N_SAMPLES = 1000
+# ratio between training and test sets
+TEST_SIZE = 0.1
+
+# create a dataset
+X, y = make_moons(n_samples = N_SAMPLES, noise=0.2, random_state=100)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=42)
+
+# Training
+params_values = train(np.transpose(X_train), np.transpose(y_train.reshape((y_train.shape[0], 1))), nn_architecture, 10000, 0.01)
+
+# Prediction
+Y_test_hat, _ = full_forward_propagation(np.transpose(X_test), params_values, nn_architecture)
+
+# Accuracy achieved on the test set
+acc_test = get_accuracy_value(Y_test_hat, np.transpose(y_test.reshape((y_test.shape[0], 1))))
+print("Test set accuracy: {:.2f}".format(acc_test))
+
+# print("Final Weights and bias values:")
+# print(params_values)
