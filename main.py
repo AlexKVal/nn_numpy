@@ -8,10 +8,10 @@ nn_architecture = [
     {"input_dim": 4, "output_dim": 1, "activation": "sigmoid"},
 ]
 
-def weight_key(idx):
+def W_key(idx):
     return 'W' + str(idx)
 
-def bias_key(idx):
+def b_key(idx):
     return 'b' + str(idx)
 
 def init_layers(nn_architecture, seed = 99):
@@ -33,8 +33,8 @@ def init_layers(nn_architecture, seed = 99):
         rnd_weights = np.random.randn(layer_output_size, layer_input_size) * 0.1
         rnd_biases = np.random.randn(layer_output_size, 1) * 0.1
 
-        params_values[weight_key(layer_idx)] = rnd_weights
-        params_values[bias_key(layer_idx)] = rnd_biases
+        params_values[W_key(layer_idx)] = rnd_weights
+        params_values[b_key(layer_idx)] = rnd_biases
 
     return params_values
 
@@ -99,8 +99,8 @@ def full_forward_propagation(X, params_values, nn_architecture):
         # previous layer's output values are the next layer's input values
         A_prev = A_curr
 
-        W_curr = params_values[weight_key(layer_idx)]
-        b_curr = params_values[bias_key(layer_idx)]
+        W_curr = params_values[W_key(layer_idx)]
+        b_curr = params_values[b_key(layer_idx)]
         A_curr, Z_curr = single_layer_forward_propagation(A_prev, W_curr, b_curr, layer["activation"])
 
         # save calculated forward results
@@ -162,8 +162,8 @@ def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
 
         A_prev = memory[a_key(layer_idx_prev)]
         Z_curr = memory[z_key(layer_idx_curr)]
-        W_curr = params_values[weight_key(layer_idx_curr)]
-        b_curr = params_values[bias_key(layer_idx_curr)]
+        W_curr = params_values[W_key(layer_idx_curr)]
+        b_curr = params_values[b_key(layer_idx_curr)]
 
         dA_prev, dW_curr, db_curr = single_layer_backward_propagation(
             dA_curr, W_curr, b_curr, Z_curr, A_prev, activation_curr
@@ -173,6 +173,14 @@ def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
         grads_values[db_key(layer_idx_curr)] = db_curr
 
     return grads_values
+
+# updating parameter values using gradient descent
+def update(params_values, grads_values, nn_architecture, learning_rate):
+    for layer_idx, layer in enumerate(nn_architecture, 1):
+        params_values[W_key(layer_idx)] -= learning_rate * grads_values[dW_key(layer_idx)]
+        params_values[b_key(layer_idx)] -= learning_rate * grads_values[db_key(layer_idx)]
+
+    return params_values
 
 
 nn_params_values = init_layers(nn_architecture)
