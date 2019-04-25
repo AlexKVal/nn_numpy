@@ -3,11 +3,9 @@ from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
 
 nn_architecture = [
-    {"input_dim": 2,  "output_dim": 25, "activation": "relu"},
-    {"input_dim": 25, "output_dim": 50, "activation": "relu"},
-    {"input_dim": 50, "output_dim": 50, "activation": "relu"},
-    {"input_dim": 50, "output_dim": 25, "activation": "relu"},
-    {"input_dim": 25, "output_dim": 1, "activation": "sigmoid"},
+    {"input_dim": 2,  "output_dim": 20, "activation": "relu"},
+    {"input_dim": 20, "output_dim": 10, "activation": "relu"},
+    {"input_dim": 10, "output_dim": 1, "activation": "sigmoid"},
 ]
 
 def W_key(idx):
