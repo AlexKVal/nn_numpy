@@ -2,12 +2,20 @@ import numpy as np
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
 
+# hyperparams
 nn_architecture = [
     {"input_dim": 2,  "output_dim": 15, "activation": "relu"},
-    {"input_dim": 15, "output_dim": 20, "activation": "relu"},
-    {"input_dim": 20, "output_dim": 20, "activation": "relu"},
-    {"input_dim": 20, "output_dim": 1, "activation": "sigmoid"},
+    {"input_dim": 15, "output_dim": 10, "activation": "relu"},
+    {"input_dim": 10, "output_dim": 1, "activation": "sigmoid"},
 ]
+seed = 11
+epochs = 10000
+learning_rate = 0.1
+
+# model data, dynamic part
+params_values = {} # weights and bias values, W and b values
+memory = {} # cache for backward propagation, Z and A values
+grads_values = {} # cost function derivatives calculated w.r.t. params_values, dW and db values
 
 def W_key(idx):
     return 'W' + str(idx)
@@ -15,10 +23,21 @@ def W_key(idx):
 def b_key(idx):
     return 'b' + str(idx)
 
-def init_layers(nn_architecture, seed = 99):
+def a_key(idx):
+    return 'A' + str(idx)
+
+def z_key(idx):
+    return 'Z' + str(idx)
+
+def dW_key(idx):
+    return 'dW' + str(idx)
+
+def db_key(idx):
+    return 'db' + str(idx)
+
+
+def init_layers():
     np.random.seed(seed)
-    number_of_layers = len(nn_architecture)
-    params_values = {} # cache
 
     for idx, layer in enumerate(nn_architecture):
         layer_idx = idx + 1 # layer indexes are 1 based
@@ -36,8 +55,6 @@ def init_layers(nn_architecture, seed = 99):
 
         params_values[W_key(layer_idx)] = rnd_weights
         params_values[b_key(layer_idx)] = rnd_biases
-
-    return params_values
 
 
 # Z - is a dot product of input values and weights in a neuron
@@ -82,16 +99,8 @@ def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation="relu"):
         raise Exception("Non-supported activation function")
 
 
-def a_key(idx):
-    return 'A' + str(idx)
-
-def z_key(idx):
-    return 'Z' + str(idx)
-
 # X - input values
-# params_values - working "cache" of Weights and Bias values
-def full_forward_propagation(X, params_values, nn_architecture):
-    memory = {} # cache for backward propagation
+def full_forward_propagation(X):
     A_curr = X # X vector is the activation for layer 0
 
     for idx, layer in enumerate(nn_architecture):
@@ -108,7 +117,7 @@ def full_forward_propagation(X, params_values, nn_architecture):
         memory[a_key(idx)] = A_prev # idx contains previous layer index value
         memory[z_key(layer_idx)] = Z_curr
 
-    return A_curr, memory # return final output A_curr along with cache for backpropagation
+    return A_curr # return final output A_curr
 
 
 # Loss function: binary crossentropy
@@ -145,14 +154,7 @@ def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, a
     return dA_prev, dW_curr, db_curr
 
 
-def dW_key(idx):
-    return 'dW' + str(idx)
-
-def db_key(idx):
-    return 'db' + str(idx)
-
-def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
-    grads_values = {} # cost function derivatives calculated w.r.t. params_values
+def full_backward_propagation(Y_hat, Y):
     m = Y.shape[1] # number of examples
     Y = Y.reshape(Y_hat.shape) # ensure the same shape of the prediction vector and labels vector
 
@@ -177,15 +179,12 @@ def full_backward_propagation(Y_hat, Y, memory, params_values, nn_architecture):
         grads_values[dW_key(layer_idx_curr)] = dW_curr
         grads_values[db_key(layer_idx_curr)] = db_curr
 
-    return grads_values
 
 # updating parameter values using gradient descent
-def update(params_values, grads_values, nn_architecture, learning_rate):
+def update():
     for layer_idx, layer in enumerate(nn_architecture, 1):
         params_values[W_key(layer_idx)] -= learning_rate * grads_values[dW_key(layer_idx)]
         params_values[b_key(layer_idx)] -= learning_rate * grads_values[db_key(layer_idx)]
-
-    return params_values
 
 
 # an auxiliary function that converts probability into class
@@ -201,8 +200,8 @@ def get_accuracy_value(Y_hat, Y):
 
 
 # putting it all together
-def train(X, Y, nn_architecture, epochs, learning_rate):
-    params_values = init_layers(nn_architecture, 2) # different seed
+def train(X, Y):
+    init_layers()
 
     # lists storing the history of metrics calculated during the learning process
     cost_history = []
@@ -210,7 +209,7 @@ def train(X, Y, nn_architecture, epochs, learning_rate):
 
     for i in range(epochs):
         # forward
-        Y_hat, memory_cache = full_forward_propagation(X, params_values, nn_architecture)
+        Y_hat = full_forward_propagation(X)
 
         # calculate and save metrics
         cost = get_cost_value(Y_hat, Y)
@@ -219,15 +218,13 @@ def train(X, Y, nn_architecture, epochs, learning_rate):
         accuracy_history.append(accuracy)
 
         # backward - calculate gradient
-        grads_values = full_backward_propagation(Y_hat, Y, memory_cache, params_values, nn_architecture)
+        full_backward_propagation(Y_hat, Y)
         # update model state
-        params_values = update(params_values, grads_values, nn_architecture, learning_rate)
+        update()
 
         # feedback during the training process
         if i % 50 == 0:
             print("Iter: {:05} - cost: {:.5f} - accur: {:.5f}".format(i, cost, accuracy))
-
-    return params_values
 
 
 # ===============================================
@@ -243,12 +240,10 @@ X, y = make_moons(n_samples = N_SAMPLES, noise=0.2, random_state=100)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=42)
 
 # Training
-epochs = 10000
-learning_rate = 0.1
-params_values = train(np.transpose(X_train), np.transpose(y_train.reshape((y_train.shape[0], 1))), nn_architecture, epochs, learning_rate)
+train(np.transpose(X_train), np.transpose(y_train.reshape((y_train.shape[0], 1))))
 
 # Prediction
-Y_test_hat, _ = full_forward_propagation(np.transpose(X_test), params_values, nn_architecture)
+Y_test_hat = full_forward_propagation(np.transpose(X_test))
 
 # Accuracy achieved on the test set
 acc_test = get_accuracy_value(Y_test_hat, np.transpose(y_test.reshape((y_test.shape[0], 1))))
