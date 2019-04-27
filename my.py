@@ -12,10 +12,12 @@ seed = 11
 epochs = 10000
 learning_rate = 0.1
 
-# model data, dynamic part
-params_values = {} # weights and bias values, W and b values
-memory = {} # cache for backward propagation, Z and A values
-grads_values = {} # cost function derivatives calculated w.r.t. params_values, dW and db values
+# model data, contains
+# weights and bias values, W and b values
+# cache for backward propagation, Z and A values
+# cost function derivatives calculated w.r.t. model_values, dW and db values
+model_values = {}
+
 
 def W_key(idx):
     return 'W' + str(idx)
@@ -53,8 +55,8 @@ def init_layers():
         rnd_weights = np.random.randn(layer_output_size, layer_input_size) * 0.1
         rnd_biases = np.random.randn(layer_output_size, 1) * 0.1
 
-        params_values[W_key(layer_idx)] = rnd_weights
-        params_values[b_key(layer_idx)] = rnd_biases
+        model_values[W_key(layer_idx)] = rnd_weights
+        model_values[b_key(layer_idx)] = rnd_biases
 
 
 # Z - is a dot product of input values and weights in a neuron
@@ -109,13 +111,13 @@ def full_forward_propagation(X):
         # previous layer's output values are the next layer's input values
         A_prev = A_curr
 
-        W_curr = params_values[W_key(layer_idx)]
-        b_curr = params_values[b_key(layer_idx)]
+        W_curr = model_values[W_key(layer_idx)]
+        b_curr = model_values[b_key(layer_idx)]
         A_curr, Z_curr = single_layer_forward_propagation(A_prev, W_curr, b_curr, layer["activation"])
 
-        # save calculated forward results
-        memory[a_key(idx)] = A_prev # idx contains previous layer index value
-        memory[z_key(layer_idx)] = Z_curr
+        # save calculated forward results for backpropagation phase
+        model_values[a_key(idx)] = A_prev # idx contains previous layer index value
+        model_values[z_key(layer_idx)] = Z_curr
 
     return A_curr # return final output A_curr
 
@@ -167,24 +169,24 @@ def full_backward_propagation(Y_hat, Y):
 
         dA_curr = dA_prev
 
-        A_prev = memory[a_key(layer_idx_prev)]
-        Z_curr = memory[z_key(layer_idx_curr)]
-        W_curr = params_values[W_key(layer_idx_curr)]
-        b_curr = params_values[b_key(layer_idx_curr)]
+        A_prev = model_values[a_key(layer_idx_prev)]
+        Z_curr = model_values[z_key(layer_idx_curr)]
+        W_curr = model_values[W_key(layer_idx_curr)]
+        b_curr = model_values[b_key(layer_idx_curr)]
 
         dA_prev, dW_curr, db_curr = single_layer_backward_propagation(
             dA_curr, W_curr, b_curr, Z_curr, A_prev, activation_curr
         )
 
-        grads_values[dW_key(layer_idx_curr)] = dW_curr
-        grads_values[db_key(layer_idx_curr)] = db_curr
+        model_values[dW_key(layer_idx_curr)] = dW_curr
+        model_values[db_key(layer_idx_curr)] = db_curr
 
 
 # updating parameter values using gradient descent
-def update():
+def update_model_state():
     for layer_idx, layer in enumerate(nn_architecture, 1):
-        params_values[W_key(layer_idx)] -= learning_rate * grads_values[dW_key(layer_idx)]
-        params_values[b_key(layer_idx)] -= learning_rate * grads_values[db_key(layer_idx)]
+        model_values[W_key(layer_idx)] -= learning_rate * model_values[dW_key(layer_idx)]
+        model_values[b_key(layer_idx)] -= learning_rate * model_values[db_key(layer_idx)]
 
 
 # an auxiliary function that converts probability into class
@@ -213,14 +215,13 @@ def train(X, Y):
 
         # calculate and save metrics
         cost = get_cost_value(Y_hat, Y)
-        cost_history.append(cost)
         accuracy = get_accuracy_value(Y_hat, Y)
+        cost_history.append(cost)
         accuracy_history.append(accuracy)
 
         # backward - calculate gradient
         full_backward_propagation(Y_hat, Y)
-        # update model state
-        update()
+        update_model_state()
 
         # feedback during the training process
         if i % 50 == 0:
@@ -248,6 +249,3 @@ Y_test_hat = full_forward_propagation(np.transpose(X_test))
 # Accuracy achieved on the test set
 acc_test = get_accuracy_value(Y_test_hat, np.transpose(y_test.reshape((y_test.shape[0], 1))))
 print("Test set accuracy: {:.2f}".format(acc_test))
-
-# print("Final Weights and bias values:")
-# print(params_values)
